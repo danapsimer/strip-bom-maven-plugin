@@ -1,19 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project 
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="
+    http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.dhptech.maven</groupId>
   <artifactId>strip-bom-plugin</artifactId>
   <packaging>maven-plugin</packaging>
   <version>1.0.0-SNAPSHOT</version>
   <name>strip-bom-plugin</name>
+  <description>This plugin will strip BOMs from source files or files in your
+  build directory</description>
   <licenses>
     <license>
       <name>apache-2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0</url>
     </license>
   </licenses>
-  <url>http://maven.apache.org</url>
+  <url>http://code.google.com/p/strip-bom-maven-plugin/</url>
+  <developers>
+    <developer>
+      <id>danap</id>
+      <name>Dana H. P'Simer</name>
+      <organization>DHP Technologies, Inc.</organization>
+      <organizationUrl>http://dhptech.com</organizationUrl>
+      <roles>
+        <role>Lead</role>
+        <role>Code Monkey</role>
+      </roles>
+      <timezone>EST</timezone>
+      <url>http://danapsimer.com</url>
+    </developer>
+  </developers>
+  <organization>
+    <name>DHP Technologies, Inc.</name>
+    <url>http://dhptech.com</url>
+  </organization>
+  <issueManagement>
+    <system>Google Code</system>
+    <url>http://code.google.com/p/strip-bom-maven-plugin/issues/list</url>
+  </issueManagement>
+  <scm>
+    <url>http://code.google.com/p/strip-bom-maven-plugin/source/browse/</url>
+    <connection>scm:hg:https://strip-bom-maven-plugin.googlecode.com/hg/</connection>
+    <developerConnection>scm:hg:https://strip-bom-maven-plugin.googlecode.com/hg/</developerConnection>
+  </scm>
+  <distributionManagement>
+    <repository>
+      <id>strip-bom-deploy</id>
+      <name>Repo</name>
+      <uniqueVersion>true</uniqueVersion>
+      <url>file:${strip-bom.deploy.directory}/repo</url>
+    </repository>
+    <site>
+      <id>strip-bom-site</id>
+      <name>Site</name>
+      <url>file:${strip-bom.deploy.directory}/site/${state}/</url>
+    </site>
+    <downloadUrl>http://code.google.com/p/strip-bom-maven-plugin/downloads/list</downloadUrl>
+  </distributionManagement>
+  <ciManagement>
+    <notifiers>
+      <notifier>
+        <sendOnWarning>danap@dhptech.com</sendOnWarning>
+        <sendOnError>danap@dhptech.com</sendOnError>
+        <sendOnFailure>danap@dhptech.com</sendOnFailure>
+        <type>email</type>
+      </notifier>
+    </notifiers>
+    <system>hudson</system>
+    <url>http://dhptech.com:8081/hudson</url>
+  </ciManagement>
   <dependencies>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -38,6 +97,11 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <strip-bom.deploy.directory>${basedir}/target/deploy</strip-bom.deploy.directory>
+    <state>snapshot</state>
+  </properties>
   <build>
     <plugins>
       <plugin>
@@ -45,20 +109,55 @@
         <configuration>
           <source>1.6</source>
           <target>1.6</target>
-            <encoding>${project.build.sourceEncoding}</encoding>
         </configuration>
       </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-resources-plugin</artifactId>
-            <version>2.2</version>
-            <configuration>
-                <encoding>${project.build.sourceEncoding}</encoding>
-            </configuration>
-        </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generated-helpmojo</id>
+            <goals>
+              <goal>helpmojo</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.dhptech.maven</groupId>
+        <artifactId>strip-bom-plugin</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <configuration>
+          <files>
+            <fileSet>
+              <directory>${basedir}/src/main/java</directory>
+              <includes>
+                <include>**/*.java</include>
+              </includes>
+            </fileSet>
+            <fileSet>
+              <directory>${basedir}/src/test/java</directory>
+              <includes>
+                <include>**/*.java</include>
+              </includes>
+            </fileSet>
+            <fileSet>
+              <directory>${basedir}</directory>
+              <includes>
+                <include>**/*.xml</include>
+              </includes>
+            </fileSet>
+          </files>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-plugin-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </reporting>
 </project>
