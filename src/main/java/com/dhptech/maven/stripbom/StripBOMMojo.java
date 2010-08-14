@@ -14,8 +14,11 @@ package com.dhptech.maven.stripbom;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.shared.model.fileset.FileSet;
+import org.apache.maven.shared.model.fileset.util.FileSetManager;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,25 +28,27 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.maven.shared.model.fileset.FileSet;
-import org.apache.maven.shared.model.fileset.util.FileSetManager;
 
 /**
- * Goal which touches a timestamp file.
+ * Goal to strip BOMs from UTF-8 text files.
  *
  * @goal strip-bom
- * 
  * @phase process-sources
+ * @requiresProject false
  */
 public class StripBOMMojo
   extends AbstractMojo {
 
   protected static final byte[] UTF8_BOM = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
+  /**
+   * Locations of a single file to strip the BOM from.
+   * @parameter expression="${file}"
+   */
+  private File file;
 
   /**
    * Locations of the files to strip BOMs.
    * @parameter
-   * @required
    */
   private List<FileSet> files;
 
@@ -73,14 +78,22 @@ public class StripBOMMojo
   @Override
   public void execute()
     throws MojoExecutionException {
-    FileSetManager fsm = new FileSetManager(getLog());
-    for (FileSet fileSet : files) {
-      for (String fileName : fsm.getIncludedFiles(fileSet)) {
-        File file = new File(fileSet.getDirectory(),fileName);
-        try {
-          stripBOM(file);
-        } catch (IOException ex) {
-          throw new MojoExecutionException("IOException attempting to strip BOMs from "+file, ex);
+    if (file != null) {
+      try {
+        stripBOM(file);
+      } catch (IOException ex) {
+        throw new MojoExecutionException("IOException attempting to strip BOM from " + file, ex);
+      }
+    } else {
+      FileSetManager fsm = new FileSetManager(getLog());
+      for (FileSet fileSet : files) {
+        for (String fileName : fsm.getIncludedFiles(fileSet)) {
+          File file = new File(fileSet.getDirectory(), fileName);
+          try {
+            stripBOM(file);
+          } catch (IOException ex) {
+            throw new MojoExecutionException("IOException attempting to strip BOM from " + file, ex);
+          }
         }
       }
     }
@@ -95,13 +108,13 @@ public class StripBOMMojo
    * @throws MojoExecutionException
    */
   private void stripBOM(File file) throws IOException, MojoExecutionException {
-    getLog().debug("Checking for BOM in "+file);
+    getLog().debug("Checking for BOM in " + file);
     InputStream in = new FileInputStream(file);
     byte[] bom = new byte[3];
     in.read(bom);
     if (Arrays.equals(bom, UTF8_BOM)) {
-      getLog().info("Found BOM in "+file+", removing.");
-      File tempFile = File.createTempFile(file.getName(), ".tmp",file.getParentFile());
+      getLog().info("Found BOM in " + file + ", removing.");
+      File tempFile = File.createTempFile(file.getName(), ".tmp", file.getParentFile());
       OutputStream out = new FileOutputStream(tempFile);
       byte[] buffer = new byte[1024];
       int cnt = -1;
@@ -110,14 +123,14 @@ public class StripBOMMojo
       }
       out.close();
       File backupFile = new File(file.getAbsoluteFile().getCanonicalPath() + ".bak");
-      if ( !file.renameTo(backupFile) ) {
-        throw new MojoExecutionException("Could not rename target file, "+file+", to backup file, "+backupFile);
+      if (!file.renameTo(backupFile)) {
+        throw new MojoExecutionException("Could not rename target file, " + file + ", to backup file, " + backupFile);
       }
-      if ( !tempFile.renameTo(file) ) {
-        if ( !backupFile.renameTo(file) ) {
-          getLog().error("Could not undo rename of backup file, "+backupFile+", to target file, "+file);
+      if (!tempFile.renameTo(file)) {
+        if (!backupFile.renameTo(file)) {
+          getLog().error("Could not undo rename of backup file, " + backupFile + ", to target file, " + file);
         }
-        throw new MojoExecutionException("Could not rename temp file, "+tempFile+", to target file, "+file); 
+        throw new MojoExecutionException("Could not rename temp file, " + tempFile + ", to target file, " + file);
       }
       backupFile.delete();
     }

@@ -102,6 +102,20 @@
     <strip-bom.deploy.directory>${basedir}/target/deploy</strip-bom.deploy.directory>
     <state>snapshot</state>
   </properties>
+    <pluginRepositories>
+    <pluginRepository>
+      <id>strip-bom-repo</id>
+      <name>Strip BOM Plugin Repository</name>
+      <url>http://wiki.strip-bom-maven-plugin.googlecode.com/hg/repo/</url>
+      <layout>default</layout>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </pluginRepository>
+  </pluginRepositories>
   <build>
     <plugins>
       <plugin>
@@ -149,6 +163,11 @@
             </fileSet>
           </files>
         </configuration>
+        <executions>
+          <execution>
+            <goals><goal>strip-bom</goal></goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
