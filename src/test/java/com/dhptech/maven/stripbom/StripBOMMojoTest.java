@@ -25,7 +25,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.shared.model.fileset.FileSet;
 import static org.easymock.EasyMock.createMock;
@@ -37,48 +36,67 @@ import org.testng.annotations.BeforeClass;
 
 import org.testng.annotations.Test;
 
-
-
 /**
  *
  * @author danap
  */
-@Test(suiteName="Strip BOM Plugin Tests", testName="Strip BOM Mojo Test")
+@Test(suiteName = "Strip BOM Plugin Tests", testName = "Strip BOM Mojo Test")
 public class StripBOMMojoTest {
+
+  public static final String CHECKING_FOR_BOM_MSG = "Checking for BOM in ";
+  public static final String FOUND_BOM_MSG_PREFIX = "Found BOM in ";
+  public static final String FOUND_BOM_MSG_SUFFIX = ", removing.";
+  public static final String BOM_TEST_FILE_NAME = "./src/test/testFiles/testFileWithBOM.txt";
+  public static final String NO_BOM_TEST_FILE_NAME = "./src/test/testFiles/testFileWithoutBOM.txt";
 
   private void insertBOM(File file) throws IOException {
     InputStream in = new BufferedInputStream(new FileInputStream(file));
-    byte[] bom = new byte[3];
-    in.mark(10);
-    in.read(bom);
-    if (!Arrays.equals(bom, StripBOMMojo.UTF8_BOM)) {
-      in.reset();
-      File tempFile = File.createTempFile(file.getName(), ".tmp",file.getParentFile());
-      OutputStream out = new FileOutputStream(tempFile);
-      out.write(StripBOMMojo.UTF8_BOM);
-      byte[] buffer = new byte[1024];
-      int cnt = -1;
-      while ((cnt = in.read(buffer)) >= 0) {
-        out.write(buffer, 0, cnt);
-      }
-      out.close();
-      File backupFile = new File(file.getAbsoluteFile().getCanonicalPath() + ".bak");
-      if ( !file.renameTo(backupFile) ) {
-        assert false : "Could not rename target file, "+file+", to backup file, "+backupFile;
-      }
-      if ( !tempFile.renameTo(file) ) {
-        if ( !backupFile.renameTo(file) ) {
-          assert false : "Could not undo rename of backup file, "+backupFile+", to target file, "+file;
+    try {
+      byte[] bom = new byte[3];
+      in.mark(10);
+      in.read(bom);
+      if (!Arrays.equals(bom, StripBOMMojo.UTF8_BOM)) {
+        in.reset();
+        File tempFile = File.createTempFile(file.getName(), ".tmp", file.getParentFile());
+        OutputStream out = new FileOutputStream(tempFile);
+        out.write(StripBOMMojo.UTF8_BOM);
+        byte[] buffer = new byte[1024];
+        int cnt = -1;
+        while ((cnt = in.read(buffer)) >= 0) {
+          out.write(buffer, 0, cnt);
         }
-        assert false : "Could not rename temp file, "+tempFile+", to target file, "+file;
+        out.close();
+        File backupFile = new File(file.getAbsoluteFile().getCanonicalPath() + ".bak");
+        if (!file.renameTo(backupFile)) {
+          assert false : "Could not rename target file, " + file + ", to backup file, " + backupFile;
+        }
+        if (!tempFile.renameTo(file)) {
+          if (!backupFile.renameTo(file)) {
+            assert false : "Could not undo rename of backup file, " + backupFile + ", to target file, " + file;
+          }
+          assert false : "Could not rename temp file, " + tempFile + ", to target file, " + file;
+        }
+        backupFile.delete();
       }
-      backupFile.delete();
+    } finally {
+      in.close();
+    }
+  }
+
+  private boolean checkForBOM(File file) throws IOException {
+    InputStream in = new BufferedInputStream(new FileInputStream(file));
+    try {
+      byte[] bom = new byte[3];
+      in.read(bom);
+      return Arrays.equals(bom, StripBOMMojo.UTF8_BOM);
+    } finally {
+      in.close();
     }
   }
 
   @BeforeClass
   public void prepareTestData() throws Exception {
-    insertBOM(new File("./src/test/testFiles/testFileWithBOM.txt"));
+    insertBOM(new File(BOM_TEST_FILE_NAME));
   }
 
   @Test
@@ -86,93 +104,7 @@ public class StripBOMMojoTest {
     StripBOMMojo mojo = new StripBOMMojo();
 
     Log log = createMock(Log.class);
-    Log logDelegate = new Log() {
-
-      @Override
-      public boolean isDebugEnabled() {
-        return true;
-      }
-
-      @Override
-      public void debug(CharSequence content) {
-        System.out.println(content);
-      }
-
-      @Override
-      public void debug(CharSequence content, Throwable error) {
-        System.out.println(content);
-        error.printStackTrace();
-      }
-
-      @Override
-      public void debug(Throwable error) {
-        error.printStackTrace();
-      }
-
-      @Override
-      public boolean isInfoEnabled() {
-        return true;
-      }
-
-      @Override
-      public void info(CharSequence content) {
-        System.out.println(content);
-      }
-
-      @Override
-      public void info(CharSequence content, Throwable error) {
-        System.out.println(content);
-        error.printStackTrace();
-      }
-
-      @Override
-      public void info(Throwable error) {
-        error.printStackTrace();
-      }
-
-      @Override
-      public boolean isWarnEnabled() {
-        return true;
-      }
-
-      @Override
-      public void warn(CharSequence content) {
-        System.out.println(content);
-      }
-
-      @Override
-      public void warn(CharSequence content, Throwable error) {
-        System.out.println(content);
-        error.printStackTrace();
-      }
-
-      @Override
-      public void warn(Throwable error) {
-        error.printStackTrace();
-      }
-
-      @Override
-      public boolean isErrorEnabled() {
-        return true;
-      }
-
-      @Override
-      public void error(CharSequence content) {
-        System.out.println(content);
-      }
-
-      @Override
-      public void error(CharSequence content, Throwable error) {
-        System.out.println(content);
-        error.printStackTrace();
-      }
-
-      @Override
-      public void error(Throwable error) {
-        error.printStackTrace();
-      }
-
-    };
+    Log logDelegate = new StdOutMavenLogger();
     mojo.setLog(log);
 
     List<FileSet> fileSets = new ArrayList<FileSet>();
@@ -183,15 +115,17 @@ public class StripBOMMojoTest {
     fileSets.add(fileSet);
     mojo.setFiles(fileSets);
 
-    log.debug("Checking for BOM in ./src/test/testFiles/testFileWithBOM.txt");
+    log.debug(CHECKING_FOR_BOM_MSG + BOM_TEST_FILE_NAME);
     expectLastCall().andDelegateTo(logDelegate).once();
-    log.debug("Checking for BOM in ./src/test/testFiles/testFileWithoutBOM.txt");
+    log.debug(CHECKING_FOR_BOM_MSG + NO_BOM_TEST_FILE_NAME);
     expectLastCall().andDelegateTo(logDelegate).once();
-    log.info("Found BOM in ./src/test/testFiles/testFileWithBOM.txt, removing.");
+    log.info(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_MSG_SUFFIX);
     expectLastCall().andDelegateTo(logDelegate).once();
 
     replay(log);
     mojo.execute();
     verify(log);
+
+    assert !checkForBOM(new File(BOM_TEST_FILE_NAME));
   }
 }
