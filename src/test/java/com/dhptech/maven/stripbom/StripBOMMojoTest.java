@@ -25,16 +25,17 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.shared.model.fileset.FileSet;
+
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
-import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
-import org.testng.annotations.BeforeClass;
-
-import org.testng.annotations.Test;
 
 /**
  *
@@ -46,6 +47,7 @@ public class StripBOMMojoTest {
   public static final String CHECKING_FOR_BOM_MSG = "Checking for BOM in ";
   public static final String FOUND_BOM_MSG_PREFIX = "Found BOM in ";
   public static final String FOUND_BOM_MSG_SUFFIX = ", removing.";
+  public static final String FOUND_BOM_WARN_ONLY_MSG_SUFFIX = ", not removing.";
   public static final String BOM_TEST_FILE_NAME = "./src/test/testFiles/testFileWithBOM.txt";
   public static final String NO_BOM_TEST_FILE_NAME = "./src/test/testFiles/testFileWithoutBOM.txt";
 
@@ -100,6 +102,38 @@ public class StripBOMMojoTest {
   }
 
   @Test
+  public void testStripBOMMojoWarnOnly() throws Exception {
+    StripBOMMojo mojo = new StripBOMMojo();
+
+    Log log = createMock(Log.class);
+    Log logDelegate = new StdOutMavenLogger();
+    mojo.setLog(log);
+
+    List<FileSet> fileSets = new ArrayList<FileSet>();
+    FileSet fileSet = new FileSet();
+    fileSet.setDirectory("./src/test/testFiles");
+    fileSet.addInclude("**/*.txt");
+    fileSet.addExclude("**/*-Exclude.txt");
+    fileSets.add(fileSet);
+    mojo.setFiles(fileSets);
+
+    mojo.setWarnOnly(true);
+    
+    log.debug(CHECKING_FOR_BOM_MSG + BOM_TEST_FILE_NAME);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    log.debug(CHECKING_FOR_BOM_MSG + NO_BOM_TEST_FILE_NAME);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    log.warn(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_WARN_ONLY_MSG_SUFFIX);
+    expectLastCall().andDelegateTo(logDelegate).once();
+
+    replay(log);
+    mojo.execute();
+    verify(log);
+
+    assert checkForBOM(new File(BOM_TEST_FILE_NAME));
+  }
+
+ @Test(dependsOnMethods="testStripBOMMojoWarnOnly")
   public void testStripBOMMojo() throws Exception {
     StripBOMMojo mojo = new StripBOMMojo();
 
@@ -119,7 +153,7 @@ public class StripBOMMojoTest {
     expectLastCall().andDelegateTo(logDelegate).once();
     log.debug(CHECKING_FOR_BOM_MSG + NO_BOM_TEST_FILE_NAME);
     expectLastCall().andDelegateTo(logDelegate).once();
-    log.info(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_MSG_SUFFIX);
+    log.warn(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_MSG_SUFFIX);
     expectLastCall().andDelegateTo(logDelegate).once();
 
     replay(log);

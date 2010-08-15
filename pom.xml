@@ -12,7 +12,8 @@
   <version>1.0.0-SNAPSHOT</version>
   <name>strip-bom-plugin</name>
   <description>This plugin will strip BOMs from source files or files in your
-  build directory</description>
+  build directory
+  </description>
   <licenses>
     <license>
       <name>apache-2.0</name>
@@ -102,7 +103,7 @@
     <strip-bom.deploy.directory>${basedir}/target/deploy</strip-bom.deploy.directory>
     <state>snapshot</state>
   </properties>
-    <pluginRepositories>
+  <pluginRepositories>
     <pluginRepository>
       <id>strip-bom-repo</id>
       <name>Strip BOM Plugin Repository</name>
@@ -165,7 +166,9 @@
         </configuration>
         <executions>
           <execution>
-            <goals><goal>strip-bom</goal></goals>
+            <goals>
+              <goal>strip-bom</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -176,7 +179,68 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
+        <version>2.6</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <linkJavadoc>true</linkJavadoc>
+        </configuration>
       </plugin>
     </plugins>
   </reporting>
+  <profiles>
+    <profile>
+      <id>release-only-artifacts</id>
+      <activation>
+        <property>
+          <name>performRelease</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.pluings</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.pluings</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

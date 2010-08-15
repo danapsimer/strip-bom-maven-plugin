@@ -1,4 +1,3 @@
-package com.dhptech.maven.stripbom;
 /*
  * Copyright 2010 DHP Technologies, Inc.
  *
@@ -14,6 +13,7 @@ package com.dhptech.maven.stripbom;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.dhptech.maven.stripbom;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -45,12 +45,17 @@ public class StripBOMMojo
    * @parameter expression="${file}"
    */
   private File file;
-
   /**
    * Locations of the files to strip BOMs.
    * @parameter
    */
   private List<FileSet> files;
+  /**
+   * Set to true if you only want StripBOM to issue a warning message when a file contains a BOM.
+   *
+   * @parameter expression="${warnOnly}" default-value="false"
+   */
+  private boolean warnOnly = false;
 
   /**
    * The list of fileSets that will specify the files to strip BOMs from.
@@ -68,6 +73,40 @@ public class StripBOMMojo
    */
   public void setFiles(List<FileSet> files) {
     this.files = files;
+  }
+
+  /**
+   * Get the single file to strip.
+   *
+   * @return
+   */
+  public File getFile() {
+    return file;
+  }
+
+  /**
+   * Set the single file to strip.
+   * @param file
+   */
+  public void setFile(File file) {
+    this.file = file;
+  }
+
+  /**
+   * True if we should only warn about BOMs and not actually strip them.
+   * @return true if warnOnly is true.
+   */
+  public boolean isWarnOnly() {
+    return warnOnly;
+  }
+
+  /**
+   * Set to true to warn only on finding a BOM.
+   *
+   * @param warnOnly true if we should only warn when finding a BOM.
+   */
+  public void setWarnOnly(boolean warnOnly) {
+    this.warnOnly = warnOnly;
   }
 
   /**
@@ -113,7 +152,11 @@ public class StripBOMMojo
     byte[] bom = new byte[3];
     in.read(bom);
     if (Arrays.equals(bom, UTF8_BOM)) {
-      getLog().info("Found BOM in " + file + ", removing.");
+      getLog().warn("Found BOM in " + file + ", " + (warnOnly ? "not " : "") + "removing.");
+      if (warnOnly) {
+        return;
+      }
+
       File tempFile = File.createTempFile(file.getName(), ".tmp", file.getParentFile());
       OutputStream out = new FileOutputStream(tempFile);
       byte[] buffer = new byte[1024];
@@ -122,7 +165,7 @@ public class StripBOMMojo
         out.write(buffer, 0, cnt);
       }
       out.close();
-      File backupFile = new File(file.getAbsoluteFile().getCanonicalPath() + ".bak");
+      File backupFile = File.createTempFile(file.getName(), ".bak", file.getParentFile());
       if (!file.renameTo(backupFile)) {
         throw new MojoExecutionException("Could not rename target file, " + file + ", to backup file, " + backupFile);
       }
