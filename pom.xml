@@ -50,11 +50,17 @@
   </scm>
   <distributionManagement>
     <repository>
-      <id>strip-bom-deploy</id>
-      <name>Repo</name>
+      <id>strip-bom-deploy-releases</id>
+      <name>Release Repo</name>
       <uniqueVersion>true</uniqueVersion>
-      <url>file:${strip-bom.deploy.directory}/repo</url>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
     </repository>
+    <snapshotRepository>
+      <id>strip-bom-deploy-snapshots</id>
+      <name>Snapshot Repo</name>
+      <uniqueVersion>true</uniqueVersion>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
     <site>
       <id>strip-bom-site</id>
       <name>Site</name>
@@ -72,7 +78,7 @@
       </notifier>
     </notifiers>
     <system>hudson</system>
-    <url>http://dhptech.com:8081/hudson</url>
+    <url>http://dhptech.com:8080/hudson</url>
   </ciManagement>
   <dependencies>
     <dependency>
@@ -117,12 +123,24 @@
   </properties>
   <pluginRepositories>
     <pluginRepository>
-      <id>strip-bom-repo</id>
-      <name>Strip BOM Plugin Repository</name>
-      <url>http://wiki.strip-bom-maven-plugin.googlecode.com/hg/repo/</url>
+      <id>strip-bom-repo-snapshots</id>
+      <name>Strip BOM Plugin Repository for Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
       <layout>default</layout>
       <snapshots>
         <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </pluginRepository>
+    <pluginRepository>
+      <id>strip-bom-repo-releases</id>
+      <name>Strip BOM Plugin Repository for Releases</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+      <layout>default</layout>
+      <snapshots>
+        <enabled>false</enabled>
       </snapshots>
       <releases>
         <enabled>true</enabled>
