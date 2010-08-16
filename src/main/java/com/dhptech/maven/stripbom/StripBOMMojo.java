@@ -53,9 +53,15 @@ public class StripBOMMojo
   /**
    * Set to true if you only want StripBOM to issue a warning message when a file contains a BOM.
    *
-   * @parameter expression="${warnOnly}" default-value="false"
+   * @parameter expression="${strip-bom.warnOnly}" default-value="false"
    */
   private boolean warnOnly = false;
+
+  /**
+   * Set to true if you want the build to fail when BOMs are found, really only useful if warnOnly = true.
+   * @parameter expression="${strip-bom.failBuild}" default-value="false"
+   */
+  private boolean failBuild = false;
 
   /**
    * The list of fileSets that will specify the files to strip BOMs from.
@@ -110,6 +116,24 @@ public class StripBOMMojo
   }
 
   /**
+   * True if the build should fail when BOMs are found in any of the files processed.
+   *
+   * @return the value of the failBuild property.
+   */
+  public boolean isFailBuild() {
+    return failBuild;
+  }
+
+  /**
+   * Sets the failBuild property.
+   * @see #isFailBuild
+   * @param failBuild the new value for the failBuild property
+   */
+  public void setFailBuild(boolean failBuild) {
+    this.failBuild = failBuild;
+  }
+
+  /**
    * Strips the BOMs, if found, from the specified files.
    *
    * @throws MojoExecutionException
@@ -117,9 +141,10 @@ public class StripBOMMojo
   @Override
   public void execute()
     throws MojoExecutionException {
+    boolean foundBOM = false;
     if (file != null) {
       try {
-        stripBOM(file);
+        foundBOM |= stripBOM(file);
       } catch (IOException ex) {
         throw new MojoExecutionException("IOException attempting to strip BOM from " + file, ex);
       }
@@ -129,12 +154,15 @@ public class StripBOMMojo
         for (String fileName : fsm.getIncludedFiles(fileSet)) {
           File file = new File(fileSet.getDirectory(), fileName);
           try {
-            stripBOM(file);
+            foundBOM |= stripBOM(file);
           } catch (IOException ex) {
             throw new MojoExecutionException("IOException attempting to strip BOM from " + file, ex);
           }
         }
       }
+    }
+    if ( foundBOM && failBuild ) {
+      throw new MojoExecutionException("BOM(s) Found in files, see output log for specifics.");
     }
   }
 
@@ -146,15 +174,19 @@ public class StripBOMMojo
    * @throws IOException
    * @throws MojoExecutionException
    */
-  private void stripBOM(File file) throws IOException, MojoExecutionException {
-    getLog().debug("Checking for BOM in " + file);
+  private boolean stripBOM(File file) throws IOException, MojoExecutionException {
+    if ( getLog().isDebugEnabled() ) {
+      getLog().debug("Checking for BOM in " + file);
+    }
     InputStream in = new FileInputStream(file);
     byte[] bom = new byte[3];
     in.read(bom);
     if (Arrays.equals(bom, UTF8_BOM)) {
-      getLog().warn("Found BOM in " + file + ", " + (warnOnly ? "not " : "") + "removing.");
+      if ( getLog().isWarnEnabled() ) {
+        getLog().warn("Found BOM in " + file + ", " + (warnOnly ? "not " : "") + "removing.");
+      }
       if (warnOnly) {
-        return;
+        return true; // BOM Found
       }
 
       File tempFile = File.createTempFile(file.getName(), ".tmp", file.getParentFile());
@@ -176,6 +208,8 @@ public class StripBOMMojo
         throw new MojoExecutionException("Could not rename temp file, " + tempFile + ", to target file, " + file);
       }
       backupFile.delete();
+      return true; // BOM Found
     }
+    return false; // No BOM Found
   }
 }

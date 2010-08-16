@@ -15,6 +15,7 @@
  */
 package com.dhptech.maven.stripbom;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,6 +37,7 @@ import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.verify;
 import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.expect;
 
 /**
  *
@@ -102,7 +104,8 @@ public class StripBOMMojoTest {
   }
 
   @Test
-  public void testStripBOMMojoWarnOnly() throws Exception {
+  public void testStripBOMMojoWarnOnlyFailBuild() throws Exception {
+    System.out.println("*** testStripBOMMojoWarnOnlyFailBuild");
     StripBOMMojo mojo = new StripBOMMojo();
 
     Log log = createMock(Log.class);
@@ -118,6 +121,7 @@ public class StripBOMMojoTest {
     mojo.setFiles(fileSets);
 
     mojo.setWarnOnly(true);
+    mojo.setFailBuild(true);
     
     log.debug(CHECKING_FOR_BOM_MSG + BOM_TEST_FILE_NAME);
     expectLastCall().andDelegateTo(logDelegate).once();
@@ -125,6 +129,49 @@ public class StripBOMMojoTest {
     expectLastCall().andDelegateTo(logDelegate).once();
     log.warn(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_WARN_ONLY_MSG_SUFFIX);
     expectLastCall().andDelegateTo(logDelegate).once();
+    expect(log.isDebugEnabled()).andStubDelegateTo(logDelegate);
+    expect(log.isWarnEnabled()).andStubDelegateTo(logDelegate);
+
+    replay(log);
+    try {
+      mojo.execute();
+      assert false : "expected a MojoExecutionException";
+    } catch(MojoExecutionException ex) {
+      assert ex.getMessage().equals("BOM(s) Found in files, see output log for specifics.") : "recieved unknown MojoExecutionException: "+ex;
+      System.out.println("Got expected MojoExecutionException");
+    }
+    verify(log);
+
+    assert checkForBOM(new File(BOM_TEST_FILE_NAME));
+  }
+
+  @Test
+  public void testStripBOMMojoWarnOnly() throws Exception {
+    System.out.println("*** testStripBOMMojoWarnOnly");
+    StripBOMMojo mojo = new StripBOMMojo();
+
+    Log log = createMock(Log.class);
+    Log logDelegate = new StdOutMavenLogger();
+    mojo.setLog(log);
+
+    List<FileSet> fileSets = new ArrayList<FileSet>();
+    FileSet fileSet = new FileSet();
+    fileSet.setDirectory("./src/test/testFiles");
+    fileSet.addInclude("**/*.txt");
+    fileSet.addExclude("**/*-Exclude.txt");
+    fileSets.add(fileSet);
+    mojo.setFiles(fileSets);
+
+    mojo.setWarnOnly(true);
+
+    log.debug(CHECKING_FOR_BOM_MSG + BOM_TEST_FILE_NAME);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    log.debug(CHECKING_FOR_BOM_MSG + NO_BOM_TEST_FILE_NAME);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    log.warn(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_WARN_ONLY_MSG_SUFFIX);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    expect(log.isDebugEnabled()).andStubDelegateTo(logDelegate);
+    expect(log.isWarnEnabled()).andStubDelegateTo(logDelegate);
 
     replay(log);
     mojo.execute();
@@ -133,8 +180,9 @@ public class StripBOMMojoTest {
     assert checkForBOM(new File(BOM_TEST_FILE_NAME));
   }
 
- @Test(dependsOnMethods="testStripBOMMojoWarnOnly")
+ @Test(dependsOnMethods={"testStripBOMMojoWarnOnly","testStripBOMMojoWarnOnlyFailBuild"})
   public void testStripBOMMojo() throws Exception {
+    System.out.println("*** testStripBOMMojo");
     StripBOMMojo mojo = new StripBOMMojo();
 
     Log log = createMock(Log.class);
@@ -155,11 +203,44 @@ public class StripBOMMojoTest {
     expectLastCall().andDelegateTo(logDelegate).once();
     log.warn(FOUND_BOM_MSG_PREFIX + BOM_TEST_FILE_NAME + FOUND_BOM_MSG_SUFFIX);
     expectLastCall().andDelegateTo(logDelegate).once();
+    expect(log.isDebugEnabled()).andStubDelegateTo(logDelegate);
+    expect(log.isWarnEnabled()).andStubDelegateTo(logDelegate);
 
     replay(log);
     mojo.execute();
     verify(log);
 
     assert !checkForBOM(new File(BOM_TEST_FILE_NAME));
+  }
+
+  @Test(dependsOnMethods="testStripBOMMojo")
+  public void testStripBOMMojoWarnOnlyFailBuildNoBOMs() throws Exception {
+    System.out.println("*** testStripBOMMojoWarnOnlyFailBuildNoBOMs");
+    StripBOMMojo mojo = new StripBOMMojo();
+
+    Log log = createMock(Log.class);
+    Log logDelegate = new StdOutMavenLogger();
+    mojo.setLog(log);
+
+    List<FileSet> fileSets = new ArrayList<FileSet>();
+    FileSet fileSet = new FileSet();
+    fileSet.setDirectory("./src/test/testFiles");
+    fileSet.addInclude("**/*.txt");
+    fileSet.addExclude("**/*-Exclude.txt");
+    fileSets.add(fileSet);
+    mojo.setFiles(fileSets);
+
+    mojo.setWarnOnly(true);
+    mojo.setFailBuild(true);
+
+    log.debug(CHECKING_FOR_BOM_MSG + BOM_TEST_FILE_NAME);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    log.debug(CHECKING_FOR_BOM_MSG + NO_BOM_TEST_FILE_NAME);
+    expectLastCall().andDelegateTo(logDelegate).once();
+    expect(log.isDebugEnabled()).andStubDelegateTo(logDelegate);
+
+    replay(log);
+    mojo.execute();
+    verify(log);
   }
 }
