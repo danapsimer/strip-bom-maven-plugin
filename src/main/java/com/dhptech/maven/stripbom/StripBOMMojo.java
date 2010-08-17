@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -49,7 +50,7 @@ public class StripBOMMojo
    * Locations of the files to strip BOMs.
    * @parameter
    */
-  private List<FileSet> files;
+  private List files;
   /**
    * Set to true if you only want StripBOM to issue a warning message when a file contains a BOM.
    *
@@ -68,7 +69,7 @@ public class StripBOMMojo
    *
    * @return the file sets.
    */
-  public List<FileSet> getFiles() {
+  public List getFiles() {
     return files;
   }
 
@@ -77,7 +78,7 @@ public class StripBOMMojo
    *
    * @param files the file sets.
    */
-  public void setFiles(List<FileSet> files) {
+  public void setFiles(List files) {
     this.files = files;
   }
 
@@ -138,7 +139,6 @@ public class StripBOMMojo
    *
    * @throws MojoExecutionException
    */
-  @Override
   public void execute()
     throws MojoExecutionException {
     boolean foundBOM = false;
@@ -150,13 +150,17 @@ public class StripBOMMojo
       }
     } else {
       FileSetManager fsm = new FileSetManager(getLog());
-      for (FileSet fileSet : files) {
-        for (String fileName : fsm.getIncludedFiles(fileSet)) {
-          File file = new File(fileSet.getDirectory(), fileName);
+      Iterator fileSetIter = files.iterator();
+      while(fileSetIter.hasNext()) {
+        FileSet fileSet = (FileSet)fileSetIter.next();
+        String[] fileNames = fsm.getIncludedFiles(fileSet);
+        for (int f = 0; f < fileNames.length; f++) {
+          String fileName = fileNames[f];
+          File currFile = new File(fileSet.getDirectory(), fileName);
           try {
-            foundBOM |= stripBOM(file);
+            foundBOM |= stripBOM(currFile);
           } catch (IOException ex) {
-            throw new MojoExecutionException("IOException attempting to strip BOM from " + file, ex);
+            throw new MojoExecutionException("IOException attempting to strip BOM from " + currFile, ex);
           }
         }
       }
